@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+}
+
+group 'com.agoramp'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+
+    // lombok
+    compileOnly 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+    // https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+
+    // Project reactor
+    implementation platform('io.projectreactor:reactor-bom:2022.0.4')
+    // Reactor Netty
+    implementation 'io.projectreactor.netty:reactor-netty-core'
+    // Reactor Netty for HTTP
+    implementation 'io.projectreactor.netty:reactor-netty-http'
+    // Reactor extras
+    implementation 'io.projectreactor.addons:reactor-extra:3.5.0'
+}
+
+test {
+    useJUnitPlatform()
+}
