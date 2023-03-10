@@ -29,9 +29,9 @@ public interface FulfillmentReceiver {
 
     default Mono<Long> onReceive(String orderId) {
         Flux<String> onlinePlayersFlux = AgoraFulfillmentService.INSTANCE.getExecutor().retrieveOnlinePlayerIds();
-        Mono<List<String>> onlinePlayers = onlinePlayersFlux == null ?
-                Mono.just(Collections.emptyList()) :
-                onlinePlayersFlux.collectList();
+        Mono<Optional<List<String>>> onlinePlayers = onlinePlayersFlux == null ?
+                Mono.just(Optional.empty()) :
+                onlinePlayersFlux.collectList().map(Optional::of);
         List<FulfillmentType> types = new ArrayList<>();
         for (FulfillmentType type : FulfillmentType.values()) {
             Mono<Boolean> handler = AgoraFulfillmentService.INSTANCE.getExecutor().processFulfillment(new Fulfillment<>(
@@ -47,7 +47,7 @@ public interface FulfillmentReceiver {
                 .map(online -> new FulfillmentPollRequest(
                         orderId,
                         types,
-                        online,
+                        online.orElse(null),
                         0
                 ))
                 .flatMap(this::processFulfillments);
