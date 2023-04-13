@@ -1,10 +1,11 @@
 package com.agoramp.data;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 @Data
 @Builder
+@AllArgsConstructor
+@RequiredArgsConstructor
 public class FulfillmentDestinationConfig {
     private final String secret;
     private Integer port;

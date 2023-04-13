@@ -13,7 +13,12 @@ public class DataUtil {
             .create();
 
     public static <T> T fromJson(String json, Class<T> type) {
-        return GSON.fromJson(json, type);
+        try {
+            return GSON.fromJson(json, type);
+        } catch (Throwable t) {
+            t.printStackTrace();
+            throw t;
+        }
     }
 
     public static byte[] toJson(Object value) {

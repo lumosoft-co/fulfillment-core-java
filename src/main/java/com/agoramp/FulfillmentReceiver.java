@@ -10,11 +10,16 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
+import reactor.util.retry.Retry;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,18 +58,20 @@ public interface FulfillmentReceiver {
                 .flatMap(this::processFulfillments);
     }
 
-    default Flux<Fulfillment<?>> pollFulfillments(FulfillmentPollRequest request) {
+    default Flux<Fulfillment> pollFulfillments(FulfillmentPollRequest request) {
         return HttpClient.create()
-                .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://admin.agoramp.com"))
+                .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
+                .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
                 .post()
                 .uri("/fulfillments/" + AgoraFulfillmentService.INSTANCE.getConfig().getSecret())
-                .send(Mono.just(Unpooled.copiedBuffer(new Gson().toJson(request).getBytes(StandardCharsets.UTF_8))))
+                .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(request))))
                 .responseContent()
                 .aggregate()
-                .map(buf -> new String(buf.array(), StandardCharsets.UTF_8))
+                .asString(StandardCharsets.UTF_8)
                 .map(JsonParser::parseString)
                 .flatMapIterable(JsonElement::getAsJsonArray)
-                .map(json -> (Fulfillment<?>) DataUtil.fromJson(json.toString(), Fulfillment.class));
+                .map(json -> DataUtil.fromJson(json.toString(), Fulfillment.class))
+                .cast(Fulfillment.class);
     }
 
     default Mono<Long> processFulfillments(FulfillmentPollRequest request) {
@@ -73,22 +80,24 @@ public interface FulfillmentReceiver {
                     Mono<Boolean> handler = AgoraFulfillmentService.INSTANCE.getExecutor().processFulfillment(f);
                     if (handler == null) return Mono.empty();
                     return HttpClient.create()
-                            .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://admin.agoramp.com"))
+                            .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
+                            .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
                             .post()
                             .uri("/fulfillmentupdate")
-                            .send(Mono.just(Unpooled.copiedBuffer(DataUtil.toJson(new FulfillmentUpdateRequest(
+                            .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(new FulfillmentUpdateRequest(
                                     f.getId(),
                                     FulfillmentStatus.PENDING,
                                     FulfillmentStatus.PROCESSING
                             )))))
                             .response()
                             .filter(r -> r.status().code() == 200)
-                            .then(handler)
+                            .flatMap(r -> handler)
                             .flatMap(success -> HttpClient.create()
-                                    .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://admin.agoramp.com"))
+                                    .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
+                                            .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
                                     .post()
                                     .uri("/fulfillmentupdate")
-                                    .send(Mono.just(Unpooled.copiedBuffer(DataUtil.toJson(new FulfillmentUpdateRequest(
+                                    .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(new FulfillmentUpdateRequest(
                                             f.getId(),
                                             null,
                                             success ? FulfillmentStatus.COMPLETED : FulfillmentStatus.PENDING
@@ -99,7 +108,7 @@ public interface FulfillmentReceiver {
                                             throw new Error("server down");
                                         }
                                     })
-                                    .retry()
+                                    .retryWhen(Retry.fixedDelay(1, Duration.ofSeconds(10)))
                             );
                 })
                 .count()
