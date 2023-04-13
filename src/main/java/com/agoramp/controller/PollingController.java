@@ -17,9 +17,9 @@ public enum PollingController implements FulfillmentReceiver {
         AtomicInteger counter = new AtomicInteger(1);
         Mono.delay(Duration.ofSeconds(30))
                 .map(l -> counter.getAndIncrement())
-                .doOnNext(l -> System.out.println("Polling for fulfillments... " + l))
+                //.doOnNext(l -> System.out.println("Polling for fulfillments... " + l))
                 .flatMap(i -> processFulfillments())
-                //.filter(l -> l > 0)
+                .filter(l -> l > 0)
                 .doOnNext(l -> System.out.printf("Processed %d fulfillments\n", l))
                 .retry()
                 .repeat()
