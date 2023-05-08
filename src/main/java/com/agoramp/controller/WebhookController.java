@@ -53,9 +53,8 @@ public enum WebhookController implements FulfillmentReceiver {
             return outbound.sendByteArray(
                     inbound
                             .receive()
-                            .aggregate()
-                            .filter(buf -> buf.readableBytes() < 32000) // max length 32kb
-                            .map(bytes -> new String(bytes.array(), StandardCharsets.UTF_8))
+                            .asString(StandardCharsets.UTF_8)
+                            .reduce("", (acc, str) -> acc + str)
                             .flatMap(orderId -> {
                                 try {
                                     return onReceive(orderId);

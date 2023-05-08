@@ -92,6 +92,8 @@ public interface FulfillmentReceiver {
                             .response()
                             .filter(r -> r.status().code() == 200)
                             .flatMap(r -> handler)
+                            .onErrorReturn(false)
+                            .defaultIfEmpty(false)
                             .flatMap(success -> HttpClient.create()
                                     .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
                                             .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
