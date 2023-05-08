@@ -10,26 +10,22 @@ public class CLIServiceTest {
 
     public static void main(String[] args) throws ServiceAlreadyInitializedException {
         String key = args[0];
-        AgoraFulfillmentService.INSTANCE.initialize(new FulfillmentDestinationConfig(key), new FulfillmentExecutor() {
-            @Override
-            public Flux<String> retrieveOnlinePlayerIds() {
-                return Mono.just("Justin42069").flux();
-            }
+        AgoraFulfillmentService.INSTANCE.initialize(new FulfillmentDestinationConfig(key, 0), new FulfillmentExecutor() {
 
             @Override
             public Mono<Boolean> processCommandFulfillment(GameServerCommandsFulfillment fulfillment) {
                 return Mono.fromSupplier(() -> {
-                    System.out.println(fulfillment);
+                    System.out.println("Fulfillment: " + fulfillment);
                     for (GameServerCommandsFulfillment.Command command : fulfillment.getCommands()) {
                         System.out.println(command.getCommand());
                     }
-                    return false;
+                    return true;
                 });
             }
         });
         while (true) {
             try {
-                Thread.sleep(10);
+                Thread.sleep(1000000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
