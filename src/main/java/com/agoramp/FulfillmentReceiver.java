@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ByteBufMono;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.retry.Retry;
 
@@ -65,9 +66,8 @@ public interface FulfillmentReceiver {
                 .post()
                 .uri("/fulfillments/" + AgoraFulfillmentService.INSTANCE.getConfig().getSecret())
                 .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(request))))
-                .responseContent()
-                .aggregate()
-                .asString(StandardCharsets.UTF_8)
+                .response((r, b) -> b.aggregate().asString(StandardCharsets.UTF_8))
+                .singleOrEmpty()
                 .map(JsonParser::parseString)
                 .flatMapIterable(JsonElement::getAsJsonArray)
                 .map(json -> DataUtil.fromJson(json.toString(), Fulfillment.class))

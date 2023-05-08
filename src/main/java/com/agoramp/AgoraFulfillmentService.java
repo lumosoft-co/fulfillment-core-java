@@ -44,6 +44,7 @@ public enum AgoraFulfillmentService {
     public void initialize(FulfillmentDestinationConfig config, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException {
         if (this.config != null) throw new ServiceAlreadyInitializedException();
         if (config == null || config.getSecret() == null) throw new Error("Secret not defined");
+        System.out.println("Agora fulfillment service initializing...");
         this.config = config;
         this.executor = executor;
         if (config.getPort() != null && config.getPort() >= 0) {
