@@ -6,6 +6,7 @@ import com.agoramp.data.FulfillmentDestinationConfig;
 import com.agoramp.error.ServiceAlreadyInitializedException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -24,13 +25,16 @@ public enum AgoraFulfillmentService {
             initialize(new Gson().fromJson(new FileReader(file), FulfillmentDestinationConfig.class), executor);
         } catch (FileNotFoundException e) {
             file.getParentFile().mkdirs();
-            FulfillmentDestinationConfig config = new FulfillmentDestinationConfig(null);
-            String json = new GsonBuilder()
-                    .setPrettyPrinting()
-                    .create()
-                    .toJson(config);
+            FulfillmentDestinationConfig config = new FulfillmentDestinationConfig(
+                    "Get your secret from https://admin.agoramp.com/destinations",
+                    -1
+            );
+            JsonObject json = new Gson()
+                    .toJsonTree(config)
+                    .getAsJsonObject();
+            json.addProperty("port-comment", "Specifying the port field will register this destination for webhook support");
             FileWriter writer = new FileWriter(file);
-            writer.write(json);
+            writer.write(new GsonBuilder().setPrettyPrinting().create().toJson(json));
             writer.flush();
             writer.close();
             initialize(config, executor);
@@ -42,8 +46,8 @@ public enum AgoraFulfillmentService {
         if (config == null || config.getSecret() == null) throw new Error("Secret not defined");
         this.config = config;
         this.executor = executor;
-        if (config.getPort() != null) {
-            WebhookController.INSTANCE.initialize(config.getPort());
+        if (config.getPort() != null && config.getPort() >= 0) {
+            WebhookController.INSTANCE.initialize(config.getPort(), config.getSecret());
         }
         PollingController.INSTANCE.initialize();
     }
