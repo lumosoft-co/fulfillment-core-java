@@ -16,8 +16,8 @@ public class CLIServiceTest {
             public Mono<Boolean> processCommandFulfillment(GameServerCommandsFulfillment fulfillment) {
                 return Mono.fromSupplier(() -> {
                     System.out.println("Fulfillment: " + fulfillment);
-                    for (GameServerCommandsFulfillment.Command command : fulfillment.getCommands()) {
-                        System.out.println(command.getCommand());
+                    for (String command : fulfillment.getCommands()) {
+                        System.out.println(command);
                     }
                     return true;
                 });

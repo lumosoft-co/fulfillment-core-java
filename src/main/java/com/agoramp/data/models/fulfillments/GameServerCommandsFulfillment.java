@@ -8,13 +8,8 @@ import java.util.List;
 
 @Data
 public class GameServerCommandsFulfillment {
-    private List<Command> commands;
+    private List<String> commands;
     private String target;
-
-    @Getter
-    public static class Command {
-        private String command;
-        private OnlineStatus requiredStatus;
-        private Integer requiredSlots;
-    }
+    private OnlineStatus requiredStatus;
+    private int requiredSlots;
 }
