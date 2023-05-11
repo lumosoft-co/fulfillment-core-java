@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id "com.apollographql.apollo3" version "3.8.1"
 }
 
 group 'com.agoramp'
@@ -31,8 +32,17 @@ dependencies {
     api 'io.projectreactor.netty:reactor-netty-http'
     // Reactor extras
     api 'io.projectreactor.addons:reactor-extra:3.5.0'
+
+    api "com.apollographql.apollo3:apollo-runtime:3.8.1"
+    api "com.apollographql.apollo3:apollo-rx3-support:3.8.1"
 }
 
 test {
     useJUnitPlatform()
+}
+
+apollo {
+    service("service") {
+        packageName.set("com.agoramp.data.models.graphql")
+    }
 }

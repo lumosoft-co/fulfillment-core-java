@@ -9,6 +9,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
@@ -39,6 +40,7 @@ public enum WebhookController implements FulfillmentReceiver {
                 .send(Mono.just(Unpooled.wrappedBuffer(String.format("{\"destination\":\"%s\", \"port\": %d}", secret, server.port()).getBytes(StandardCharsets.UTF_8))))
                 .response()
                 .filter(r -> r.status() == HttpResponseStatus.OK)
+                .publishOn(Schedulers.boundedElastic())
                 .subscribe(r -> System.out.println("Agora webhook support has been bound to port " + server.port()));
     }
 
@@ -64,6 +66,7 @@ public enum WebhookController implements FulfillmentReceiver {
                             })
                             .thenReturn(AgoraWebhookStatus.SUCCESS)
                             .defaultIfEmpty(AgoraWebhookStatus.FAILURE)
+                            .publishOn(Schedulers.boundedElastic())
             );
 
         } catch (Throwable t) {

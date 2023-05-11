@@ -1,0 +1,19 @@
+query Shop {
+    shop {
+        id
+        title
+        currency
+        branding {
+            logo
+            colors
+        }
+        categories {
+            handle
+            title
+            subcategories {
+                handle
+                title
+            }
+        }
+    }
+}
