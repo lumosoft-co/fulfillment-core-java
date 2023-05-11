@@ -1,6 +1,5 @@
 plugins {
     id 'java-library'
-    id "com.apollographql.apollo3" version "3.8.1"
 }
 
 group 'com.agoramp'
@@ -39,10 +38,4 @@ dependencies {
 
 test {
     useJUnitPlatform()
-}
-
-apollo {
-    service("service") {
-        packageName.set("com.agoramp.data.models.graphql")
-    }
 }

@@ -1,6 +1,7 @@
 package com.agoramp;
 
 import com.agoramp.controller.PollingController;
+import com.agoramp.controller.Storefront;
 import com.agoramp.controller.WebhookController;
 import com.agoramp.data.FulfillmentDestinationConfig;
 import com.agoramp.error.ServiceAlreadyInitializedException;
@@ -47,6 +48,7 @@ public enum AgoraFulfillmentService {
         System.out.println("Agora fulfillment service initializing...");
         this.config = config;
         this.executor = executor;
+        Storefront.INSTANCE.initialize(config.getSecret());
         if (config.getPort() != null && config.getPort() >= 0) {
             WebhookController.INSTANCE.initialize(config.getPort(), config.getSecret());
         }
