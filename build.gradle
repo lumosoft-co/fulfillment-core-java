@@ -1,5 +1,7 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
+    id "com.github.johnrengelman.shadow" version "7.1.2"
 }
 
 group 'com.agoramp'
@@ -18,24 +20,42 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.26'
 
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
-    api 'com.google.code.gson:gson:2.10.1'
+    shadow 'com.google.code.gson:gson:2.10.1'
 
 
     // Project reactor
-    api platform('io.projectreactor:reactor-bom:2022.0.4')
+    shadow platform('io.projectreactor:reactor-bom:2022.0.4')
     // https://mvnrepository.com/artifact/io.projectreactor/reactor-core
-    api 'io.projectreactor:reactor-core'
+    shadow 'io.projectreactor:reactor-core'
     // Reactor Netty
-    api 'io.projectreactor.netty:reactor-netty-core'
+    shadow 'io.projectreactor.netty:reactor-netty-core'
     // Reactor Netty for HTTP
-    api 'io.projectreactor.netty:reactor-netty-http'
+    shadow 'io.projectreactor.netty:reactor-netty-http'
     // Reactor extras
-    api 'io.projectreactor.addons:reactor-extra:3.5.0'
+    shadow 'io.projectreactor.addons:reactor-extra:3.5.0'
 
-    api "com.apollographql.apollo3:apollo-runtime:3.8.1"
-    api "com.apollographql.apollo3:apollo-rx3-support:3.8.1"
+    shadow "com.apollographql.apollo3:apollo-runtime:3.8.1"
+    shadow "com.apollographql.apollo3:apollo-rx3-support:3.8.1"
 }
 
 test {
     useJUnitPlatform()
+}
+
+// Configure the shadow plugin
+shadowJar {
+    configurations = [project.configurations.shadow]
+    archiveClassifier.set('')
+}
+
+// Added publishing configuration
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact shadowJar // Publish the shadowJar as artifact
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
+        }
+    }
 }

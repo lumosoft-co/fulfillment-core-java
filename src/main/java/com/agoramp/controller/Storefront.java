@@ -58,19 +58,20 @@ public enum Storefront {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
             int responseCode = connection.getResponseCode();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            reader.close();
+
+            String body = response.toString();
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
-                }
-                reader.close();
-
-                return response.toString();
+                return body;
             } else {
-                System.out.println("Error: Response code is not 200. Received: " + responseCode);
+                System.out.println("Error: Response code is not 200. \n\tReceived: " + responseCode + "\n\tBody: " + body);
             }
         } catch (Throwable t) {
             System.out.println("Could not retrieve shop id from API.");
