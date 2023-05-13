@@ -3,7 +3,6 @@ package com.agoramp.controller;
 import com.agoramp.FulfillmentReceiver;
 import com.agoramp.util.AgoraWebhookStatus;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -32,7 +31,7 @@ public enum WebhookController implements FulfillmentReceiver {
 
         HttpClient.create()
                 .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
-                .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
+                .headers(h -> h.add("Content-Type", "application/json"))
                 .post()
                 .uri("/bind")
                 .send(Mono.just(Unpooled.wrappedBuffer(String.format("{\"destination\":\"%s\", \"port\": %d}", secret, server.port()).getBytes(StandardCharsets.UTF_8))))

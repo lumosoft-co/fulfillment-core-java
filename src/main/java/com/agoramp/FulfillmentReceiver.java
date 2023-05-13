@@ -9,7 +9,6 @@ import com.agoramp.util.DataUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -58,13 +57,13 @@ public interface FulfillmentReceiver {
     default Flux<Fulfillment> pollFulfillments(FulfillmentPollRequest request) {
         return HttpClient.create()
                 .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
-                .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
+                .headers(h -> h.add("Content-Type", "application/json"))
                 .post()
                 .uri("/fulfillments/" + AgoraFulfillmentService.INSTANCE.getConfig().getSecret())
                 .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(request))))
                 .response((r, b) -> b.aggregate().asString(StandardCharsets.UTF_8))
                 .singleOrEmpty()
-                .map(JsonParser::parseString)
+                .map(s -> new JsonParser().parse(s))
                 .flatMapIterable(JsonElement::getAsJsonArray)
                 .map(json -> DataUtil.fromJson(json.toString(), Fulfillment.class))
                 .cast(Fulfillment.class);
@@ -77,7 +76,7 @@ public interface FulfillmentReceiver {
                     if (handler == null) return Mono.empty();
                     return HttpClient.create()
                             .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
-                            .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
+                            .headers(h -> h.add("Content-Type", "application/json"))
                             .post()
                             .uri("/fulfillmentupdate")
                             .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(new FulfillmentUpdateRequest(
@@ -92,7 +91,7 @@ public interface FulfillmentReceiver {
                             .defaultIfEmpty(false)
                             .flatMap(success -> HttpClient.create()
                                     .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
-                                            .headers(h -> h.add(HttpHeaderNames.CONTENT_TYPE, "application/json"))
+                                            .headers(h -> h.add("Content-Type", "application/json"))
                                     .post()
                                     .uri("/fulfillmentupdate")
                                     .send(ByteBufFlux.fromString(Mono.just(new Gson().toJson(new FulfillmentUpdateRequest(

@@ -22,9 +22,7 @@ public enum AgoraFulfillmentService {
     private FulfillmentExecutor executor;
 
     public void initializeFromFile(File file, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException, IOException {
-        try {
-            initialize(new Gson().fromJson(new FileReader(file), FulfillmentDestinationConfig.class), executor);
-        } catch (FileNotFoundException e) {
+        if (!file.exists()) {
             file.getParentFile().mkdirs();
             FulfillmentDestinationConfig config = new FulfillmentDestinationConfig(
                     "Get your secret from https://admin.agoramp.com/destinations",
@@ -38,8 +36,10 @@ public enum AgoraFulfillmentService {
             writer.write(new GsonBuilder().setPrettyPrinting().create().toJson(json));
             writer.flush();
             writer.close();
-            initialize(config, executor);
+            System.out.println("Please enter your Agora destination secret into the config");
+            return;
         }
+        initialize(new Gson().fromJson(new FileReader(file), FulfillmentDestinationConfig.class), executor);
     }
 
     public void initialize(FulfillmentDestinationConfig config, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException {

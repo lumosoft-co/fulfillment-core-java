@@ -1,55 +1,94 @@
 package com.agoramp.controller;
 
 import com.agoramp.error.GraphQLError;
-import com.apollographql.apollo3.ApolloCall;
-import com.apollographql.apollo3.ApolloClient;
-import com.apollographql.apollo3.api.Mutation;
-import com.apollographql.apollo3.api.Operation;
-import com.apollographql.apollo3.api.Query;
-import com.apollographql.apollo3.rx3.Rx3Apollo;
+import com.apollographql.apollo3.api.*;
+import com.apollographql.apollo3.api.json.JsonNumber;
+import com.apollographql.apollo3.api.json.MapJsonReader;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.ByteBufMono;
+import reactor.netty.http.client.HttpClient;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.lang.Error;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public enum Storefront {
     INSTANCE;
 
-    private ApolloClient client;
+    private String shopId;
 
     public void initialize(String secret) {
-        String shopId = getShopId(secret);
+        shopId = getShopId(secret);
         if (shopId == null) {
             throw new Error("Could not find shop linked to this deployment");
         }
-        client = new ApolloClient.Builder()
-                .serverUrl("https://api.agoramp.com/graphql")
-                .addHttpHeader("X-Agora-Store-ID", shopId)
-                .build();
     }
 
-    public <T extends Query.Data> Mono<T> query(Query<T> query) {
-        return doCall(client.query(query));
+    public <T extends Query.Data> Mono<T> query(Query<T> operation) {
+        return call(operation, "query");
     }
 
-    public <T extends Mutation.Data> Mono<T> mutate(Mutation<T> mutation) {
-        return doCall(client.mutation(mutation));
+    public <T extends Mutation.Data> Mono<T> mutate(Mutation<T> operation) {
+        return call(operation, "mutation");
     }
 
-    private <T extends Operation.Data> Mono<T> doCall(ApolloCall<T> call) {
-        return Mono
-                .fromCompletionStage(Rx3Apollo.single(call).toCompletionStage())
-                .publishOn(Schedulers.boundedElastic())
-                .mapNotNull(r -> {
-                    if (r.hasErrors()) {
-                        throw new GraphQLError(r.errors);
+    public <T extends Operation.Data> Mono<T> call(Operation<T> operation, String type) {
+        return HttpClient.create()
+                .headers(h -> h
+                        .add("X-Agora-Store-ID", shopId)
+                        .add("Content-Type", "application/json"))
+                .post()
+                .uri("https://api.agoramp.com/graphql")
+                .send(ByteBufMono.fromString(Mono.just("{\"" + type + "\": \"" + operation.document() + "\"}")))
+                .response((r, b) -> b.aggregate().asString(StandardCharsets.UTF_8))
+                .singleOrEmpty()
+                .map(json -> Operations.parseJsonResponse(operation, json))
+                .map(n -> {
+                    if (n.hasErrors()) {
+                        throw new GraphQLError(n.errors);
                     } else {
-                        return r.data;
+                        return n.dataAssertNoErrors();
                     }
-                });
+                })
+                .publishOn(Schedulers.boundedElastic());
+    }
+
+    private Map<String, ?> convert(JsonObject json) {
+        Map<String, Object> out = new HashMap<>();
+        for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
+            out.put(entry.getKey(), convert(entry.getValue()));
+        }
+        return out;
+    }
+
+    private Object convert(JsonElement json) {
+        if (json.isJsonObject()) {
+            return convert(json.getAsJsonObject());
+        } if (json.isJsonArray()) {
+            List<Object> val = new ArrayList<>();
+            for (JsonElement element : json.getAsJsonArray()) {
+                val.add(convert(element));
+            }
+            return val;
+        } else if (json.isJsonPrimitive()) {
+            JsonPrimitive p = json.getAsJsonPrimitive();
+            if (p.isBoolean()) return p.getAsBoolean();
+            if (p.isString()) return p.getAsString();
+            return new JsonNumber(p.getAsString());
+        } else {
+            return null;
+        }
     }
 
     private String getShopId(String secret) {
@@ -58,19 +97,10 @@ public enum Storefront {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
             int responseCode = connection.getResponseCode();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-
-            String body = response.toString();
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                return body;
+                return read(connection.getInputStream());
             } else {
+                String body = read(connection.getErrorStream());
                 System.out.println("Error: Response code is not 200. \n\tReceived: " + responseCode + "\n\tBody: " + body);
             }
         } catch (Throwable t) {
@@ -78,5 +108,19 @@ public enum Storefront {
             t.printStackTrace();
         }
         return null;
+    }
+
+    private String read(InputStream input) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+        StringBuilder response = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+
+        return response.toString();
+
     }
 }

@@ -10,7 +10,6 @@ public class CLIServiceTest {
     public static void main(String[] args) throws ServiceAlreadyInitializedException {
         String key = args[0];
         AgoraFulfillmentService.INSTANCE.initialize(new FulfillmentDestinationConfig(key, 0), new FulfillmentExecutor() {
-
             @Override
             public Mono<Boolean> processCommandFulfillment(GameServerCommandsFulfillment fulfillment) {
                 return Mono.fromSupplier(() -> {
