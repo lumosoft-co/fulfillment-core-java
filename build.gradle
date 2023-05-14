@@ -46,8 +46,11 @@ test {
 // Configure the shadow plugin
 shadowJar {
     configurations = [project.configurations.shadow]
-    exclude 'kotlin'
     archiveClassifier.set('')
+
+    relocate 'io.netty', 'com.agoramp.netty'
+    relocate 'org.reactivestreams', 'com.agoramp.reactive.streams'
+    relocate 'reactor', 'com.agoramp.reactive'
 }
 
 build.dependsOn('shadowJar')

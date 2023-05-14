@@ -2,12 +2,13 @@ package com.agoramp.controller;
 
 import com.agoramp.error.GraphQLError;
 import com.apollographql.apollo3.api.*;
-import com.apollographql.apollo3.api.json.JsonNumber;
-import com.apollographql.apollo3.api.json.MapJsonReader;
+import com.apollographql.apollo3.api.json.*;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import okio.Buffer;
+import okio.BufferedSink;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufMono;
@@ -30,9 +31,10 @@ public enum Storefront {
 
     public void initialize(String secret) {
         shopId = getShopId(secret);
-        if (shopId == null) {
+        if (shopId == null || shopId.isEmpty()) {
             throw new Error("Could not find shop linked to this deployment");
         }
+        System.out.printf("Loaded storefront connection to shop (%s)\n", shopId);
     }
 
     public <T extends Query.Data> Mono<T> query(Query<T> operation) {
@@ -44,13 +46,19 @@ public enum Storefront {
     }
 
     public <T extends Operation.Data> Mono<T> call(Operation<T> operation, String type) {
+        Buffer buffer = new Buffer();
+        try {
+            Operations.composeJsonRequest(operation, new BufferedSinkJsonWriter(buffer, "  "));
+        } catch (Exception e) {
+            return Mono.error(e);
+        }
         return HttpClient.create()
                 .headers(h -> h
                         .add("X-Agora-Store-ID", shopId)
                         .add("Content-Type", "application/json"))
                 .post()
                 .uri("https://api.agoramp.com/graphql")
-                .send(ByteBufMono.fromString(Mono.just("{\"" + type + "\": \"" + operation.document() + "\"}")))
+                .send(ByteBufMono.fromString(Mono.just(buffer.readUtf8())))
                 .response((r, b) -> b.aggregate().asString(StandardCharsets.UTF_8))
                 .singleOrEmpty()
                 .map(json -> Operations.parseJsonResponse(operation, json))
