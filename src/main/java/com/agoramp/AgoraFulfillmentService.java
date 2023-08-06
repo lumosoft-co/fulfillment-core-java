@@ -58,5 +58,6 @@ public enum AgoraFulfillmentService {
     public void shutdown() {
         if (this.config == null) return;
         WebhookController.INSTANCE.shutdown();
+        PollingController.INSTANCE.shutdown();
     }
 }
