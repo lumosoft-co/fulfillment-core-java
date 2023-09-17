@@ -34,7 +34,7 @@ public enum Storefront {
         if (shopId == null || shopId.isEmpty()) {
             throw new Error("Could not find shop linked to this deployment");
         }
-        System.out.printf("Loaded storefront connection to shop (%s)\n", shopId);
+        System.out.println(String.format("Loaded storefront connection to shop (%s)", shopId));
     }
 
     public <T extends Query.Data> Mono<T> query(Query<T> operation) {

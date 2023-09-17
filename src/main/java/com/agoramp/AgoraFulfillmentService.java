@@ -21,30 +21,29 @@ public enum AgoraFulfillmentService {
     @Getter(AccessLevel.PACKAGE)
     private FulfillmentExecutor executor;
 
-    public void initializeFromFile(File file, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException, IOException {
+    public boolean initializeFromFile(File file, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException, IOException {
         if (!file.exists()) {
             file.getParentFile().mkdirs();
             FulfillmentDestinationConfig config = new FulfillmentDestinationConfig(
                     "Get your secret from https://admin.agoramp.com/destinations",
-                    -1
+                    0
             );
             JsonObject json = new Gson()
                     .toJsonTree(config)
                     .getAsJsonObject();
-            json.addProperty("port-comment", "Specifying the port field will register this destination for webhook support");
+            json.addProperty("port-comment", "Set the port field to -1 to disable webhooks");
             FileWriter writer = new FileWriter(file);
             writer.write(new GsonBuilder().setPrettyPrinting().create().toJson(json));
             writer.flush();
             writer.close();
-            System.out.println("Please enter your Agora destination secret into the config");
-            return;
+            return false;
         }
-        initialize(new Gson().fromJson(new FileReader(file), FulfillmentDestinationConfig.class), executor);
+        return initialize(new Gson().fromJson(new FileReader(file), FulfillmentDestinationConfig.class), executor);
     }
 
-    public void initialize(FulfillmentDestinationConfig config, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException {
+    public boolean initialize(FulfillmentDestinationConfig config, FulfillmentExecutor executor) throws ServiceAlreadyInitializedException {
         if (this.config != null) throw new ServiceAlreadyInitializedException();
-        if (config == null || config.getSecret() == null) throw new Error("Secret not defined");
+        if (config == null || config.getSecret() == null) return false;
         System.out.println("Agora fulfillment service initializing...");
         this.config = config;
         this.executor = executor;
@@ -53,6 +52,7 @@ public enum AgoraFulfillmentService {
             WebhookController.INSTANCE.initialize(config.getPort(), config.getSecret());
         }
         PollingController.INSTANCE.initialize();
+        return true;
     }
 
     public void shutdown() {

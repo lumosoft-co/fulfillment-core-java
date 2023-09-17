@@ -38,8 +38,9 @@ public enum WebhookController implements FulfillmentReceiver {
                 .uri("/bind")
                 .send(Mono.just(Unpooled.wrappedBuffer(String.format("{\"destination\":\"%s\", \"port\": %d}", secret, server.port()).getBytes(StandardCharsets.UTF_8))))
                 .response()
-                .filter(r -> r.status() == HttpResponseStatus.OK)
+                .flatMap(r -> r.status() == HttpResponseStatus.OK ? Mono.just(r) : Mono.error(new Error("Received error from server: " + r.status())))
                 .publishOn(Schedulers.single())
+                .doOnError(t -> System.out.println("Agora webhook support could not be enabled, players will not receive products instantly"))
                 .subscribe(r -> System.out.println("Agora webhook support has been bound to port " + server.port()));
     }
 

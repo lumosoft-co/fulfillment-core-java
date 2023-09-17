@@ -7,6 +7,6 @@ import lombok.*;
 @AllArgsConstructor
 @RequiredArgsConstructor
 public class FulfillmentDestinationConfig {
-    private final String secret;
+    private String secret;
     private Integer port;
 }
