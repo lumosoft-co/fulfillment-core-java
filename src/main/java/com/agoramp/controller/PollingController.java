@@ -15,14 +15,14 @@ public enum PollingController implements FulfillmentReceiver {
 
     public void initialize() {
         subscription = Mono
-                .delay(Duration.ofSeconds(30))
-                .flatMap(i -> processFulfillments())
+                .delay(Duration.ofMinutes(2))
+                .flatMap(i -> processFulfillments().publishOn(Schedulers.single()))
                 .doOnNext(l -> System.out.printf("Processed %d fulfillments\n", l))
                 .thenReturn("")
                 .defaultIfEmpty("")
+                .publishOn(Schedulers.single())
                 .retry()
                 .repeat()
-                .publishOn(Schedulers.boundedElastic())
                 .subscribe();
     }
 

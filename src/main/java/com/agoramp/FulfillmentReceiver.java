@@ -11,6 +11,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.retry.Retry;
@@ -66,7 +67,8 @@ public interface FulfillmentReceiver {
                 .map(s -> new JsonParser().parse(s))
                 .flatMapIterable(JsonElement::getAsJsonArray)
                 .map(json -> DataUtil.fromJson(json.toString(), Fulfillment.class))
-                .cast(Fulfillment.class);
+                .cast(Fulfillment.class)
+                .publishOn(Schedulers.single());
     }
 
     default Mono<Long> processFulfillments(FulfillmentPollRequest request) {
@@ -89,6 +91,7 @@ public interface FulfillmentReceiver {
                             .flatMap(r -> handler)
                             .onErrorReturn(false)
                             .defaultIfEmpty(false)
+                            .publishOn(Schedulers.single())
                             .flatMap(success -> HttpClient.create()
                                     .baseUrl(Optional.ofNullable(System.getenv("AGORA-API-URL")).orElse("https://api.agoramp.com"))
                                             .headers(h -> h.add("Content-Type", "application/json"))
@@ -105,6 +108,7 @@ public interface FulfillmentReceiver {
                                             throw new Error("server down");
                                         }
                                     })
+                                    .publishOn(Schedulers.single())
                                     .retryWhen(Retry.fixedDelay(1, Duration.ofSeconds(10)))
                             );
                 })
@@ -117,6 +121,7 @@ public interface FulfillmentReceiver {
                             request.getOnlinePlayers(),
                             request.getPage() + 1
                     )).map(l -> l + c);
-                });
+                })
+                .publishOn(Schedulers.single());
     }
 }

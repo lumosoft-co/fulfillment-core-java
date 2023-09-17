@@ -11,6 +11,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpServer;
 
 import java.nio.charset.StandardCharsets;
@@ -27,6 +28,7 @@ public enum WebhookController implements FulfillmentReceiver {
                 .host("0.0.0.0")
                 .port(port)
                 .handle(this::handle)
+                .runOn(LoopResources.create("Agora Webhook", 1, false))
                 .bindNow();
 
         HttpClient.create()
@@ -37,7 +39,7 @@ public enum WebhookController implements FulfillmentReceiver {
                 .send(Mono.just(Unpooled.wrappedBuffer(String.format("{\"destination\":\"%s\", \"port\": %d}", secret, server.port()).getBytes(StandardCharsets.UTF_8))))
                 .response()
                 .filter(r -> r.status() == HttpResponseStatus.OK)
-                .publishOn(Schedulers.boundedElastic())
+                .publishOn(Schedulers.single())
                 .subscribe(r -> System.out.println("Agora webhook support has been bound to port " + server.port()));
     }
 
@@ -63,7 +65,7 @@ public enum WebhookController implements FulfillmentReceiver {
                             })
                             .thenReturn(AgoraWebhookStatus.SUCCESS)
                             .defaultIfEmpty(AgoraWebhookStatus.FAILURE)
-                            .publishOn(Schedulers.boundedElastic())
+                            .publishOn(Schedulers.single())
             );
 
         } catch (Throwable t) {

@@ -64,12 +64,12 @@ public enum Storefront {
                 .map(json -> Operations.parseJsonResponse(operation, json))
                 .map(n -> {
                     if (n.hasErrors()) {
-                        throw new GraphQLError(n.errors);
+                        throw new GraphQLError(operation, n.errors);
                     } else {
                         return n.dataAssertNoErrors();
                     }
                 })
-                .publishOn(Schedulers.boundedElastic());
+                .publishOn(Schedulers.single());
     }
 
     private Map<String, ?> convert(JsonObject json) {
