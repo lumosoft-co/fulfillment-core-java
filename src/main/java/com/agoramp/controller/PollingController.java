@@ -17,6 +17,7 @@ public enum PollingController implements FulfillmentReceiver {
         subscription = Mono
                 .delay(Duration.ofMinutes(2))
                 .flatMap(i -> processFulfillments().publishOn(Schedulers.single()))
+                .filter(l -> l > 0)
                 .doOnNext(l -> System.out.println(String.format("Processed %d fulfillments", l)))
                 .thenReturn("")
                 .defaultIfEmpty("")
